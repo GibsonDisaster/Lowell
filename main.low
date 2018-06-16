@@ -1,0 +1,24 @@
+Prog {
+  sum :: {[Int]} => Float;
+  sum(list) {
+    let s: [Int] := list;
+    return 1.3;
+  }
+
+  fact :: {Int} => Int;
+  fact(x) {
+    if (x == 0) {
+      return 1;
+    }
+
+    let p: Int := x - 1;
+    let y: Int := fact (p, p);
+    let z: Int := x * y;
+    return z;
+  }
+
+  main :: {} => Bool;
+  main() {
+    return True;
+  }
+}
