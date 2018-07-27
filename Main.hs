@@ -7,6 +7,11 @@ module Main where
   import Types
   import TypeChecker
 
+  {-
+    TODO
+    [] Custom Data Types
+  -}
+
   -- ParserState Functions
 
   addDecVar :: String -> LType -> ParserState -> ParserState

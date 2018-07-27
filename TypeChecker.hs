@@ -7,7 +7,7 @@ module TypeChecker where
     [] List contains only one type
     [] No Orphans
       [] func defs
-      [] func bodies
+      [] func bodies-+-
   -}
 
   getReturnVal :: LStruct -> (String, LType)
