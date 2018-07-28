@@ -1,5 +1,6 @@
 module TypeChecker where
   import Types
+  import qualified Data.Map as M
 
   {- TO IMPLEMENT -}
   {-
@@ -12,6 +13,12 @@ module TypeChecker where
 
   getReturnVal :: LStruct -> (String, LType)
   getReturnVal (LFuncDec n _ t) = (n, t)
+
+  -- find current function using current func field, pass that functions list of types, and then pass its args 
+  linkArgTypes :: (String, [LType]) -> (String, [LStruct]) -> Maybe (String, [(LStruct, LType)])
+  linkArgTypes (n, types) (m, args)
+    | n /= m || length types /= length args = Nothing
+    | otherwise = Just (n, zip args types)
 
   getLType :: LStruct -> LType
   getLType (LLitI _) = LInt
@@ -29,6 +36,7 @@ module TypeChecker where
     where
       allFuncRets = allFuncsMatchReturn (funcDefs ps) (funcReturns ps)
 
+  -- Determine if all functions return their intended type
   allFuncsMatchReturn :: [LStruct] -> [(String, LStruct)] -> [Bool]
   allFuncsMatchReturn fDefs' fRets
     | null fDefs || null fRets || length fDefs /= length fRets = []
@@ -37,3 +45,10 @@ module TypeChecker where
         fDefs = map getReturnVal fDefs'
         namesM = (fst (head fDefs)) == (fst (head fRets))
         typesM = (snd (head fDefs)) == (getLType (snd (head fRets)))
+
+  allVarsMatchDec :: M.Map String LType -> M.Map String LType -> [Bool]
+  allVarsMatchDec varsDec varsUsed
+    | null varsDec || null varsUsed || length varsDec /= length varsUsed = []
+    | otherwise = []
+      where
+        varsUsed' = M.toList varsUsed

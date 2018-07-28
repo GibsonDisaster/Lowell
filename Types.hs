@@ -8,6 +8,7 @@ module Types where
              | LChar
              | LUnit
              | LList LType
+             | LError
              deriving (Show, Eq)
 
   data LStruct = LProgram LStruct [LStruct] -- Comments Main-Block
@@ -41,15 +42,16 @@ module Types where
                deriving Show
 
   data ParserState = ParserState {
-    decVars :: M.Map String LType, -- Var Var-Type
-    usedVars :: [String], -- Var
-    funcDefs :: [LStruct],
-    funcBodies :: [LStruct],
-    funcReturns :: [(String, LStruct)],
-    funcRetTypes :: M.Map String LType,
-    usedVarMap :: M.Map String LType,
-    funcVars :: [(String, [LStruct])],
-    currentFunc :: String,
-    errors :: [String],
-    shouldError :: Bool
-  } deriving Show
+    decVars :: M.Map String LType, -- Vars that have been declared
+    usedVars :: [String], -- Vars that have been used in the code
+    funcDefs :: [LStruct], -- Function definitions
+    funcBodies :: [LStruct], -- Function body definitions
+    funcReturns :: [(String, LStruct)], -- Functions with what they actually return
+    funcRetTypes :: M.Map String LType, -- Functions with their return type
+    funcArgTypes :: [(String, [LType])], -- Functions with list of their arg types
+    funcArgVars :: [(String, [LStruct])], -- Functions with list of their args
+    currentFunc :: String, -- Current function being parsed
+    context :: LType, -- Type that code is currently expecting to return (used for determining if var is being used right)
+    errors :: [String], -- List of errors as strings, accumulated throughout the parsing
+    shouldError :: Bool -- True if 1 or more errors in the errors list
+  } | EmptyState deriving Show

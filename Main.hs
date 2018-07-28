@@ -10,7 +10,32 @@ module Main where
   {-
     TODO
     [] Custom Data Types
+    [] Code Gen To Assembly
+    [] Recursion?
+    [] Finish Type Checker
   -}
+
+  functionsList :: M.Map String LType
+  functionsList = M.fromList [
+                              ("print", LUnit),
+                              ("input", LString)
+                             ]
+
+  initParserState :: ParserState
+  initParserState = ParserState {
+      decVars = M.empty,
+      usedVars = [],
+      funcDefs = [],
+      funcBodies = [],
+      funcReturns = [],
+      funcRetTypes = M.empty,
+      funcArgTypes = [],
+      funcArgVars = [],
+      currentFunc = "",
+      context = LError,
+      errors = [],
+      shouldError = False
+  }
 
   -- ParserState Functions
 
@@ -38,11 +63,17 @@ module Main where
   changeCurFunc :: String -> ParserState -> ParserState
   changeCurFunc cf ps = ps { currentFunc = cf }
 
-  addFuncVar :: String -> LStruct -> ParserState -> ParserState
-  addFuncVar f v ps = ps { funcVars = insertTuple f v (funcVars ps) }
+  addFuncArgType :: String -> [LType] -> ParserState -> ParserState
+  addFuncArgType func t ps = ps { funcArgTypes = [(func, t)] ++ (funcArgTypes ps) }
+
+  addFuncArgVar :: String -> [LStruct] -> ParserState -> ParserState
+  addFuncArgVar func vars ps = ps { funcArgVars = [(func, vars)] ++ (funcArgVars ps) }
 
   addFuncTypeMap :: M.Map String LType -> ParserState -> ParserState
   addFuncTypeMap m ps = ps { funcRetTypes = M.union m (funcRetTypes ps) }
+
+  changeContext :: LType -> ParserState -> ParserState
+  changeContext t ps = ps { context = t }
 
   -- Utility Functions
 
@@ -160,7 +191,7 @@ module Main where
               (Just ty) -> ty
     return $ LVarName w t
 
-  parseVar' :: ParsecT String ParserState Identity [LStruct]
+  parseVar' :: ParsecT String ParserState Identity [LStruct] 
   parseVar' = do
     w <- word
     n <- getState
@@ -257,6 +288,11 @@ module Main where
     spaces
     func <- word
     spaces
+    state <- getState
+    let cont = case M.lookup func functionsList of
+                 (Just c) -> c
+                 Nothing -> (context state)
+    --modifyState (changeContext cont)
     args <- between (char '(') (char ')')  (many parseArg)
     --string ";\n"
     return $ LFuncCall func args
@@ -324,15 +360,16 @@ module Main where
     spaces
     string "::"
     spaces
-    funcArgTypes <- between (char '{') (char '}') (many ((try parseArgT) <|> (try parseListType)))
+    argTypes <- between (char '{') (char '}') (many ((try parseArgT) <|> (try parseListType)))
     spaces
     string "=>"
     spaces
     funcReturnT <- parseType
     modifyState (addFuncTypeMap (M.fromList [(funcName, funcReturnT)]))
+    modifyState (addFuncDef (LFuncDec funcName argTypes funcReturnT))
+    modifyState (addFuncArgType funcName argTypes)
     string ";\n"
-    modifyState (addFuncDef (LFuncDec funcName funcArgTypes funcReturnT))
-    return $ LFuncDec funcName funcArgTypes funcReturnT
+    return $ LFuncDec funcName argTypes funcReturnT
 
   parseFuncBody :: ParsecT String ParserState Identity LStruct
   parseFuncBody = do
@@ -347,6 +384,7 @@ module Main where
     string "}"
     newlines
     modifyState (addFuncBody (LFuncBody funcName funcArgs funcBlock))
+    modifyState (addFuncArgVar funcName funcArgs)
     return $ LFuncBody funcName funcArgs funcBlock
 
   parseFunc :: ParsecT String ParserState Identity LStruct
@@ -367,10 +405,18 @@ module Main where
     n <- getState
     return (prog, n)
 
+  getParserState :: IO ParserState
+  getParserState = do
+    input <- readFile "main.low"
+    let state = case runParser mainParser initParserState "ERROR" input of
+                  Left e -> EmptyState
+                  Right (s, n) -> n
+    return state
+
   main :: IO ()
   main = do
     input <- readFile "main.low"
-    case runParser mainParser (ParserState M.empty [] [] [] [] M.empty M.empty [] "" [] False) "ERROR" input of
+    case runParser mainParser initParserState "ERROR" input of
       Left e -> putStrLn (show e)
       Right s -> putStrLn (show s)
   {-  let r = case runParser mainParser (ParserState M.empty [] [] [] [] M.empty M.empty [] "" [] False) "ERROR" input of
