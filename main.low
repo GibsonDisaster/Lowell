@@ -1,7 +1,13 @@
+Data {
+  struct :: Person = Child [String, Int] or Adult [String, Int]
+  struct :: Human = Cool [Float]
+}
+
 Prog {
   sum :: {[Int]} => Float;
   sum(list) {
     let s: [Int] := list;
+    # This is a comment #
     return 1.3;
   }
 

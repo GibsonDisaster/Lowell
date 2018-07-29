@@ -11,8 +11,13 @@ module Types where
              | LError
              deriving (Show, Eq)
 
-  data LStruct = LProgram LStruct [LStruct] -- Comments Main-Block
-               | LComment String
+  data LStruct = LSections LStruct LStruct -- Data{} Rules{} Main {}
+               | LProgram LStruct [LStruct] -- Comments Main-Block
+               | LRule String LStruct -- rule-name Type
+               | LDatas [LStruct] -- All data of a file
+               | LDataParent String [LStruct]
+               | LData (String, [LType]) -- Data-type pairs of kinds with data associated with it ( ie: LData Person [(Child, []), (Adult, [])] )
+               | LComment String -- comment
                | LBlock [LStruct] -- Each line of the program
                | LFuncFull LStruct LStruct -- Func-Def Func-Body
                | LFuncDec String [LType] LType -- Func-Name Func-Args Func-Return-Type

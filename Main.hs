@@ -348,9 +348,16 @@ module Main where
     modifyState (addUsedVar v)
     return $ LReAssign v varVal
 
+  parseComment :: ParsecT String ParserState Identity LStruct
+  parseComment = do
+    spaces
+    comment <- between (char '#') (char '#') words
+    newlines
+    return $ LComment comment
+
   parseBlock :: ParsecT String ParserState Identity LStruct
   parseBlock = do
-    t <- (try parseForLoop) <|> (try parseLoop) <|> (try parseAssign) <|> (try parseExpr) <|> (try parseFuncCall) <|> (try parseLambda) <|> (try parseReturn) <|> (try parseFuncCall) <|> (try parseReassign) <|> (try parseMultiIf)
+    t <- (try parseForLoop) <|> (try parseLoop) <|> (try parseAssign) <|> (try parseExpr) <|> (try parseFuncCall) <|> (try parseLambda) <|> (try parseReturn) <|> (try parseFuncCall) <|> (try parseReassign) <|> (try parseMultiIf) <|> (try parseComment)
     return t
 
   parseFuncDef :: ParsecT String ParserState Identity LStruct
@@ -395,18 +402,56 @@ module Main where
 
   parseProgram :: ParsecT String ParserState Identity LStruct
   parseProgram = do
+    spaces
+    newlines
     string "Prog "
     funcs <- between (string "{\n") (char '}') (many1 parseFunc)
     return $ LProgram (LComment []) funcs
 
+  -- Returns a child of a data type (ie: Child in Person = Child | Adult)
+  parseDataChildren :: ParsecT String ParserState Identity LStruct
+  parseDataChildren = do
+    name <- word
+    spaces
+    fields <- between (char '[') (char ']') (many parseArgT)
+    spaces
+    optional (string "or")
+    spaces
+    return $ LData (name, fields)
+
+  -- Collects all children up into a parent (returns something like "LDataParent Foo (LDataChild Foo (Bar, [Bool]))" )
+  parseDataStructs :: ParsecT String ParserState Identity LStruct
+  parseDataStructs = do
+    spaces
+    string "struct ::"
+    spaces
+    dataName <- word
+    spaces
+    char '='
+    spaces
+    children <- many1 parseDataChildren
+    newlines
+    return $ LDataParent dataName children
+
+  -- Parses entire Data{} section
+  parseData :: ParsecT String ParserState Identity LStruct
+  parseData = do
+    spaces
+    string "Data"
+    spaces
+    datas <- between (string "{\n") (char '}') (many parseDataStructs)
+    return $ LDatas datas
+
   mainParser :: Parsec String ParserState (LStruct, ParserState)
   mainParser = do
+    dat <- parseData
+    -- rules <- parseRules
     prog <- parseProgram
     n <- getState
-    return (prog, n)
+    return (LSections dat prog, n)
 
-  getParserState :: IO ParserState
-  getParserState = do
+  getParser :: IO ParserState
+  getParser = do
     input <- readFile "main.low"
     let state = case runParser mainParser initParserState "ERROR" input of
                   Left e -> EmptyState
@@ -419,7 +464,3 @@ module Main where
     case runParser mainParser initParserState "ERROR" input of
       Left e -> putStrLn (show e)
       Right s -> putStrLn (show s)
-  {-  let r = case runParser mainParser (ParserState M.empty [] [] [] [] M.empty M.empty [] "" [] False) "ERROR" input of
-              Left e -> Nothing
-              Right (n, s) -> Just $ (n, s)
-    putStrLn $ (show (fmap fst r)) ++ "\n-------------------\n" ++ (show (fmap snd r)) -}
