@@ -9,10 +9,11 @@ module Main where
 
   {-
     TODO
-    [] Custom Data Types
+    [X] Custom Data Types
     [] Code Gen To Assembly
     [] Recursion?
     [] Finish Type Checker
+    [] Add optional type constraints on functions ("<typeclass>" in between :: and arglist)
   -}
 
   functionsList :: M.Map String LType
@@ -75,15 +76,6 @@ module Main where
   changeContext :: LType -> ParserState -> ParserState
   changeContext t ps = ps { context = t }
 
-  -- Utility Functions
-
-  -- Insert something into the value of a map at the specified key
-  insertTuple :: String -> a -> [(String, [a])] -> [(String, [a])]
-  insertTuple str l l'
-    | null l' = [(str, [l])] -- maybe just return []?
-    | (fst (head l')) == str = [(str, (snd (head l')) ++ [l])]
-    | otherwise = [(head l')] ++ insertTuple str l (tail l')
-
   -- Parsing Functions
 
   word :: ParsecT String ParserState Identity String
@@ -106,7 +98,7 @@ module Main where
 
   parseArgT :: ParsecT String ParserState Identity LType
   parseArgT = do
-    t <- choice [string "Int", string "Float", string "String", string "Char", string "Bool", string "()"]
+    t <- choice [string "Int", string "Float", string "String", string "Char", string "Bool", string "()", string "a", word]
     optional (string ", ")
     case t of
       "Int" -> return LInt
@@ -115,6 +107,7 @@ module Main where
       "Bool" -> return LBool
       "Char" -> return LChar
       "()" -> return LUnit
+      _ -> return LGeneric
 
   parseType :: ParsecT String ParserState Identity LType
   parseType = do
@@ -292,9 +285,7 @@ module Main where
     let cont = case M.lookup func functionsList of
                  (Just c) -> c
                  Nothing -> (context state)
-    --modifyState (changeContext cont)
     args <- between (char '(') (char ')')  (many parseArg)
-    --string ";\n"
     return $ LFuncCall func args
 
   parseLambda :: ParsecT String ParserState Identity LStruct
@@ -355,11 +346,13 @@ module Main where
     newlines
     return $ LComment comment
 
+  -- Should really be name "parseLine"
   parseBlock :: ParsecT String ParserState Identity LStruct
   parseBlock = do
     t <- (try parseForLoop) <|> (try parseLoop) <|> (try parseAssign) <|> (try parseExpr) <|> (try parseFuncCall) <|> (try parseLambda) <|> (try parseReturn) <|> (try parseFuncCall) <|> (try parseReassign) <|> (try parseMultiIf) <|> (try parseComment)
     return t
 
+  -- Pt 1 of a function
   parseFuncDef :: ParsecT String ParserState Identity LStruct
   parseFuncDef = do
     spaces
@@ -376,8 +369,10 @@ module Main where
     modifyState (addFuncDef (LFuncDec funcName argTypes funcReturnT))
     modifyState (addFuncArgType funcName argTypes)
     string ";\n"
+    spaces
     return $ LFuncDec funcName argTypes funcReturnT
 
+  -- Pt 2 of a function
   parseFuncBody :: ParsecT String ParserState Identity LStruct
   parseFuncBody = do
     spaces
@@ -400,6 +395,7 @@ module Main where
     funcBody <- parseFuncBody
     return $ LFuncFull funcDefs funcBody
 
+  -- Parses entire Prog{} section
   parseProgram :: ParsecT String ParserState Identity LStruct
   parseProgram = do
     spaces
@@ -419,7 +415,7 @@ module Main where
     spaces
     return $ LData (name, fields)
 
-  -- Collects all children up into a parent (returns something like "LDataParent Foo (LDataChild Foo (Bar, [Bool]))" )
+  -- Collects all children up into a parent (returns something like "LDataParent Foo (LDataChild (Bar, [Baz]))" )
   parseDataStructs :: ParsecT String ParserState Identity LStruct
   parseDataStructs = do
     spaces
@@ -440,15 +436,56 @@ module Main where
     string "Data"
     spaces
     datas <- between (string "{\n") (char '}') (many parseDataStructs)
+    newlines
     return $ LDatas datas
+
+  parseRem :: ParsecT String ParserState Identity LStruct
+  parseRem = do
+    spaces
+    string "Remember"
+    spaces
+    string "{\n"
+    spaces
+    remRules <- many parseFunc
+    newlines
+    spaces
+    string "}"
+    newlines
+    --remRules <- between (string "{\n") (char '}') (many parseFunc)
+    return $ LRuleInstance remRules
+
+  parseTeach :: ParsecT String ParserState Identity LStruct
+  parseTeach = do
+    spaces
+    string "Teach"
+    spaces
+    teachRules <- between (string "{\n") (string "}") (many parseFuncDef)
+    return $ LTeach teachRules
+
+  parseRules :: ParsecT String ParserState Identity LStruct
+  parseRules = do
+    spaces
+    string "Rules"
+    spaces
+    string "{\n"
+    newlines
+    spaces
+    teach <- parseTeach
+    newlines
+    spaces
+    rem <- parseRem
+    newlines
+    spaces
+    string "}"
+    return $ LRules teach rem
 
   mainParser :: Parsec String ParserState (LStruct, ParserState)
   mainParser = do
     dat <- parseData
-    -- rules <- parseRules
+    rules <- parseRules
     prog <- parseProgram
     n <- getState
-    return (LSections dat prog, n)
+    return (LSections dat rules prog, n)
 
   getParser :: IO ParserState
   getParser = do

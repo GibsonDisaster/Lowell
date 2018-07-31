@@ -8,12 +8,17 @@ module Types where
              | LChar
              | LUnit
              | LList LType
+             | LGeneric
              | LError
              deriving (Show, Eq)
 
-  data LStruct = LSections LStruct LStruct -- Data{} Rules{} Main {}
+  data LStruct = LSections LStruct LStruct LStruct -- Data{} Rules{} Main {}
                | LProgram LStruct [LStruct] -- Comments Main-Block
-               | LRule String LStruct -- rule-name Type
+               | LRules LStruct LStruct -- Teach{} Remember{}
+               | LTeach [LStruct] -- everything in Teach{}
+               | LGenericRule LStruct -- rule-name type-def
+               | LRemember [LStruct] -- everything in Remember{}
+               | LRuleInstance [LStruct] -- rule-name type-def func-body
                | LDatas [LStruct] -- All data of a file
                | LDataParent String [LStruct]
                | LData (String, [LType]) -- Data-type pairs of kinds with data associated with it ( ie: LData Person [(Child, []), (Adult, [])] )
@@ -24,8 +29,8 @@ module Types where
                | LFuncBody String [LStruct] [LStruct] -- Func-Name Func-Args Func-Body
                | LFuncCall String [LStruct] -- FuncName FuncArgs
                | LVar LType String -- Var-Type Var-Name
-               | LVarName String LType
-               | LArg String
+               | LVarName String LType -- Var-Name type
+               | LArg String -- arg name
                | LSingleLineIf LStruct LStruct LStruct -- Expr If-Expr Else-Expr
                | LIf LStruct [LStruct] -- Expr If-Block Else
                | LElse [LStruct] -- Else-Block

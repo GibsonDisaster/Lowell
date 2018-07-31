@@ -3,6 +3,15 @@ Data {
   struct :: Human = Cool [Float]
 }
 
+Rules {
+  Teach {
+    num :: {a} => Bool;
+  }
+
+  Remember {
+  }
+}
+
 Prog {
   sum :: {[Int]} => Float;
   sum(list) {
