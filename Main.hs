@@ -393,6 +393,8 @@ module Main where
   parseFunc = do
     funcDefs <- parseFuncDef
     funcBody <- parseFuncBody
+    newlines
+    spaces
     return $ LFuncFull funcDefs funcBody
 
   -- Parses entire Prog{} section
@@ -442,15 +444,9 @@ module Main where
   parseRem :: ParsecT String ParserState Identity LStruct
   parseRem = do
     spaces
-    string "Remember"
-    spaces
-    string "{\n"
-    spaces
-    remRules <- many parseFunc
     newlines
-    spaces
-    string "}"
-    newlines
+    string "Remember " 
+    remRules <- between (string "{\n") (char '}') (many1 parseFunc)
     --remRules <- between (string "{\n") (char '}') (many parseFunc)
     return $ LRuleInstance remRules
 

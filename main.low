@@ -9,6 +9,10 @@ Rules {
   }
 
   Remember {
+    num :: {Person} => Bool;
+    num(p) {
+      return True;
+    }
   }
 }
 
