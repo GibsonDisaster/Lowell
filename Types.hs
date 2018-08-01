@@ -62,6 +62,8 @@ module Types where
     funcArgVars :: [(String, [LStruct])], -- Functions with list of their args
     currentFunc :: String, -- Current function being parsed
     context :: LType, -- Type that code is currently expecting to return (used for determining if var is being used right)
+    currentSection :: String,
+    ruleNames :: [String], -- List of typeclasses
     errors :: [String], -- List of errors as strings, accumulated throughout the parsing
     shouldError :: Bool -- True if 1 or more errors in the errors list
   } | EmptyState deriving Show

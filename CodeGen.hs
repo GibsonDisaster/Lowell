@@ -1,11 +1,8 @@
-module CodeGen where
+module CodeGen (generateCode) where
   import Types
 
-  -- creates asm code as string depending on struct it is given
-  translate :: LStruct -> String
-  translate s = ""
+  writeCode :: LStruct -> IO ()
+  writeCode lstr = writeFile "lowell-ouput.c" (generateCode lstr)
 
-  -- Map over each struct and create asm representation of it
-  generate :: LStruct -> Either String (IO ())
-  generate (LProgram comments body) = Left $ concat (map translate ([comments] ++ body))
-  generate _ = Right $ putStrLn "ERROR"
+  generateCode :: LStruct -> String
+  generateCode = undefined

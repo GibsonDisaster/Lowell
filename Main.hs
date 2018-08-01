@@ -1,11 +1,13 @@
 module Main where
   import Prelude hiding (words)
   import qualified Data.Map as M
+  import Text.Pretty.Simple (pPrint)
   import Text.Parsec (Parsec, ParsecT, modifyState)
   import Text.ParserCombinators.Parsec hiding (spaces)
   import Control.Monad.Identity
   import Types
   import TypeChecker
+  import CodeGen
 
   {-
     TODO
@@ -34,6 +36,8 @@ module Main where
       funcArgVars = [],
       currentFunc = "",
       context = LError,
+      currentSection = "",
+      ruleNames = [],
       errors = [],
       shouldError = False
   }
@@ -75,6 +79,12 @@ module Main where
 
   changeContext :: LType -> ParserState -> ParserState
   changeContext t ps = ps { context = t }
+
+  changeCurrentSection :: String -> ParserState -> ParserState
+  changeCurrentSection s ps = ps { currentSection = s }
+
+  addRule :: String -> ParserState -> ParserState
+  addRule r ps = ps { ruleNames = (ruleNames ps) ++ [r] }
 
   -- Parsing Functions
 
@@ -365,9 +375,12 @@ module Main where
     string "=>"
     spaces
     funcReturnT <- parseType
-    modifyState (addFuncTypeMap (M.fromList [(funcName, funcReturnT)]))
-    modifyState (addFuncDef (LFuncDec funcName argTypes funcReturnT))
-    modifyState (addFuncArgType funcName argTypes)
+    n <- getState
+    let cur = currentSection n
+    if cur == "Teach" then modifyState (addRule funcName) else return ()
+    if cur /= "Prog" then return () else modifyState (addFuncTypeMap (M.fromList [(funcName, funcReturnT)]))
+    if cur /= "Prog" then return () else modifyState (addFuncDef (LFuncDec funcName argTypes funcReturnT))
+    if cur /= "Prog" then return () else modifyState (addFuncArgType funcName argTypes)
     string ";\n"
     spaces
     return $ LFuncDec funcName argTypes funcReturnT
@@ -385,8 +398,10 @@ module Main where
     spaces
     string "}"
     newlines
-    modifyState (addFuncBody (LFuncBody funcName funcArgs funcBlock))
-    modifyState (addFuncArgVar funcName funcArgs)
+    n <- getState
+    let cur = currentSection n
+    if cur /= "Prog" then return () else modifyState (addFuncBody (LFuncBody funcName funcArgs funcBlock))
+    if cur /= "Prog" then return () else modifyState (addFuncArgVar funcName funcArgs)
     return $ LFuncBody funcName funcArgs funcBlock
 
   parseFunc :: ParsecT String ParserState Identity LStruct
@@ -402,7 +417,8 @@ module Main where
   parseProgram = do
     spaces
     newlines
-    string "Prog "
+    string "Prog"
+    spaces
     funcs <- between (string "{\n") (char '}') (many1 parseFunc)
     return $ LProgram (LComment []) funcs
 
@@ -447,7 +463,6 @@ module Main where
     newlines
     string "Remember " 
     remRules <- between (string "{\n") (char '}') (many1 parseFunc)
-    --remRules <- between (string "{\n") (char '}') (many parseFunc)
     return $ LRuleInstance remRules
 
   parseTeach :: ParsecT String ParserState Identity LStruct
@@ -466,9 +481,11 @@ module Main where
     string "{\n"
     newlines
     spaces
+    modifyState (changeCurrentSection "Teach")
     teach <- parseTeach
     newlines
     spaces
+    modifyState (changeCurrentSection "Remember")
     rem <- parseRem
     newlines
     spaces
@@ -477,8 +494,10 @@ module Main where
 
   mainParser :: Parsec String ParserState (LStruct, ParserState)
   mainParser = do
+    modifyState (changeCurrentSection "Data")
     dat <- parseData
     rules <- parseRules
+    modifyState (changeCurrentSection "Prog")
     prog <- parseProgram
     n <- getState
     return (LSections dat rules prog, n)
@@ -495,5 +514,5 @@ module Main where
   main = do
     input <- readFile "main.low"
     case runParser mainParser initParserState "ERROR" input of
-      Left e -> putStrLn (show e)
-      Right s -> putStrLn (show s)
+      Left e -> print e
+      Right s -> print s -- pPrint s

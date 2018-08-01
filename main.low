@@ -6,12 +6,18 @@ Data {
 Rules {
   Teach {
     num :: {a} => Bool;
+    ord :: {a} => Bool;
   }
 
   Remember {
     num :: {Person} => Bool;
     num(p) {
       return True;
+    }
+
+    ord :: {Person} => Bool;
+    ord(p) {
+      return False;
     }
   }
 }
