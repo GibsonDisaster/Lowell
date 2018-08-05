@@ -30,6 +30,7 @@ module TypeChecker where
   getLType (LExpr v1 op v2) = LInt
   getLType (LVarName _ t) = t
   getLType (LVar t n) = t
+  getLType _ = LError
 
   passAllChecks :: ParserState -> Bool
   passAllChecks ps = foldr (&&) True allFuncRets

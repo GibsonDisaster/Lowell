@@ -5,17 +5,17 @@ Data {
 
 Rules {
   Teach {
-    num :: {a} => Bool;
+    num :: {a, b} => Bool;
     ord :: {a} => Bool;
   }
 
   Remember {
-    num :: {Person} => Bool;
+    num :: {Adult} => Bool;
     num(p) {
       return True;
     }
 
-    ord :: {Person} => Bool;
+    ord :: {Child} => Bool;
     ord(p) {
       return False;
     }

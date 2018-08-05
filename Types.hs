@@ -8,7 +8,8 @@ module Types where
              | LChar
              | LUnit
              | LList LType
-             | LGeneric
+             | LGeneric Char
+             | LDataStruct String
              | LError
              deriving (Show, Eq)
 
@@ -19,8 +20,8 @@ module Types where
                | LGenericRule LStruct -- rule-name type-def
                | LRemember [LStruct] -- everything in Remember{}
                | LRuleInstance [LStruct] -- rule-name type-def func-body
-               | LDatas [LStruct] -- All data of a file
-               | LDataParent String [LStruct]
+               | LDatas [LStruct] -- All data of a file [LDataParent]
+               | LDataParent String [LStruct] -- Person [LData]
                | LData (String, [LType]) -- Data-type pairs of kinds with data associated with it ( ie: LData Person [(Child, []), (Adult, [])] )
                | LComment String -- comment
                | LBlock [LStruct] -- Each line of the program
@@ -48,6 +49,7 @@ module Types where
                | LLitC Char
                | LLitB Bool
                | LLitL [LStruct]
+               | LDataStructL String LStruct -- name and/or parent and LData for it
                | LLitU () -- Deprecated
                deriving Show
 
@@ -64,6 +66,7 @@ module Types where
     context :: LType, -- Type that code is currently expecting to return (used for determining if var is being used right)
     currentSection :: String,
     ruleNames :: [String], -- List of typeclasses
+    dataStructs :: [String], -- All custom data structs
     errors :: [String], -- List of errors as strings, accumulated throughout the parsing
     shouldError :: Bool -- True if 1 or more errors in the errors list
   } | EmptyState deriving Show

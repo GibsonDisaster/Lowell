@@ -38,6 +38,7 @@ module Main where
       context = LError,
       currentSection = "",
       ruleNames = [],
+      dataStructs = [],
       errors = [],
       shouldError = False
   }
@@ -86,6 +87,9 @@ module Main where
   addRule :: String -> ParserState -> ParserState
   addRule r ps = ps { ruleNames = (ruleNames ps) ++ [r] }
 
+  addDataStruct :: String -> ParserState -> ParserState
+  addDataStruct s ps = ps { dataStructs = s:(dataStructs ps) }
+
   -- Parsing Functions
 
   word :: ParsecT String ParserState Identity String
@@ -100,15 +104,26 @@ module Main where
   newlines :: ParsecT String ParserState Identity ()
   newlines = skipMany (char '\n')
 
+  parseGeneric :: ParsecT String ParserState Identity String
+  parseGeneric = do
+    g <- choice (map char ['a'..'z'])
+    return [g]
+
   parseArg :: ParsecT String ParserState Identity LStruct
   parseArg = do
     arg <- word
     optional (string ", ")
     return $ LArg arg
 
+  parseStructArg :: ParsecT String ParserState Identity String
+  parseStructArg = do
+    s <- string "Struct"
+    spaces
+    return s
+
   parseArgT :: ParsecT String ParserState Identity LType
   parseArgT = do
-    t <- choice [string "Int", string "Float", string "String", string "Char", string "Bool", string "()", string "a", word]
+    t <- choice [try (string "Int"), try (string "Float"), try (string "String"), try (string "Char"), try (string "Bool"), try (string "()"), try (string "a"), try parseStructArg, word]
     optional (string ", ")
     case t of
       "Int" -> return LInt
@@ -117,11 +132,12 @@ module Main where
       "Bool" -> return LBool
       "Char" -> return LChar
       "()" -> return LUnit
-      _ -> return LGeneric
+      "Struct" -> return $ LDataStruct "test"
+      g -> return $ LGeneric (head g)
 
   parseType :: ParsecT String ParserState Identity LType
   parseType = do
-    t <- choice [string "Int", string "Float", string "String", string "Bool", string "Char", string "()"]
+    t <- choice [string "Int", string "Float", string "String", string "Bool", string "Char", string "()", string "Struct"]
     case t of
       "Int" -> return LInt
       "Float" -> return LFloat
@@ -129,6 +145,7 @@ module Main where
       "Char" -> return LChar
       "Bool" -> return LBool
       "()" -> return LUnit
+      "Struct" -> return $ LDataStruct "test"
 
   parseListType :: ParsecT String ParserState Identity LType
   parseListType = do
@@ -440,6 +457,7 @@ module Main where
     string "struct ::"
     spaces
     dataName <- word
+    modifyState (addDataStruct dataName)
     spaces
     char '='
     spaces
