@@ -235,6 +235,14 @@ module Main where
     v2 <- (try parseExpr) <|> (try parseVar) <|> (try parseLiteral)
     return $ LExpr v1 op v2
 
+  parseDataConstructor :: ParsecT String ParserState Identity LStruct
+  parseDataConstructor = do
+    spaces
+    d <- word
+    spaces
+    args <- between (char '[') (char ']') (sepBy parseLiteral (string ", "))
+    return $ LDataDec d args
+
   parseForLoop :: ParsecT String ParserState Identity LStruct
   parseForLoop = do
     spaces
@@ -349,7 +357,7 @@ module Main where
     spaces
     string ":="
     spaces
-    varVal <- (try parseFuncCall) <|> (try parseLambda) <|> (try parseSingleIf) <|> (try parseExpr) <|> (try parseLiteral) <|> (try parseVar) <|> (try parseList)
+    varVal <- (try parseDataConstructor) <|> (try parseFuncCall) <|> (try parseLambda) <|> (try parseSingleIf) <|> (try parseExpr) <|> (try parseLiteral) <|> (try parseVar) <|> (try parseList) <|> (try parseDataConstructor)
     string ";\n"
     modifyState (addDecVar varName varType)
     return $ LAssign varName varType varVal
@@ -453,6 +461,7 @@ module Main where
   -- Collects all children up into a parent (returns something like "LDataParent Foo (LDataChild (Bar, [Baz]))" )
   parseDataStructs :: ParsecT String ParserState Identity LStruct
   parseDataStructs = do
+    newlines
     spaces
     string "struct ::"
     spaces
@@ -533,4 +542,4 @@ module Main where
     input <- readFile "main.low"
     case runParser mainParser initParserState "ERROR" input of
       Left e -> print e
-      Right s -> print s -- pPrint s
+      Right (r, s) -> writeFile "main.c" $ generateCode r -- pPrint s

@@ -39,33 +39,33 @@ module CodeGen where
   generateCode :: LStruct -> String
   generateCode (LSections d r p) = generateCode d ++ generateCode r ++ generateCode p
   generateCode (LProgram _ bl) = concat $ map generateCode bl
-  generateCode (LDatas ds) = concat $ map generateCode ds
+  generateCode (LDatas ds) =""-- concat $ map generateCode ds
   generateCode (LDataParent n children) = concat $ map generateCode children
   generateCode (LData (n, fields)) = "struct " ++ n ++ " {\n" ++ (concat $ map generateCodeT fields) ++ "}"
-  generateCode (LRules t r) = generateCode t ++ generateCode r
-  generateCode (LTeach outlines) = concat $ map generateCode outlines
+  generateCode (LRules t r) = "" --generateCode t ++ generateCode r
+  generateCode (LTeach outlines) = (concat $ map generateCode outlines) ++ "}\n"
   generateCode (LRemember decls) = concat $ map generateCode decls
   generateCode (LRuleInstance insts) = concat $ map generateCode insts
-  generateCode (LComment c) = "// " ++ c
+  generateCode (LComment c) = "// " ++ c ++ "\n"
   generateCode (LBlock ls) = concat $ map generateCode ls
   generateCode (LFuncFull def body) = generateCode def ++ generateCode body
   generateCode (LFuncDec name args ret) = generateCodeT ret ++ " " ++ name ++ "(" ++ (constructFuncArgs args) ++ ") {\n"
-  generateCode (LFuncBody _ _ blocks) = concat $ map generateCode blocks
-  generateCode (LFuncCall name args) = name ++ "(" ++ (concat $ map generateCode args)
+  generateCode (LFuncBody _ _ blocks) = (concat $ map generateCode blocks) ++ "}\n"
+  generateCode (LFuncCall name args) = name ++ "(" ++ (concat $ map generateCode args) ++ ");"
   generateCode (LVar _ name) = name
   generateCode (LVarName name _) = name
   generateCode (LArg name) = name
   generateCode (LSingleLineIf expr i e) = "if (" ++ generateCode expr ++ ") {\n" ++ generateCode i ++ "} else {\n" ++ generateCode e ++ "}"
-  generateCode (LIf e i) = "if (" ++ generateCode e ++ ") {\n" ++ (concat $ map generateCode i)
+  generateCode (LIf e i) = "if (" ++ generateCode e ++ ") {\n" ++ (concat $ map generateCode i) ++ "}\n"
   generateCode (LElse block) = concat $ map generateCode block
   generateCode (LFor forV forL body) = "for_each_time(" ++ forV ++ forL ++ ") {\n" ++ (concat $ map generateCode body)
   generateCode (LLoop e body) = "while (" ++ generateCode e ++ ") {\n" ++ (concat $ map generateCode body)
   generateCode (LExpr vl op vl2) = generateCode vl ++ " " ++ generateCode op ++ " " ++ generateCode vl2
   generateCode (LOperator o) = o
   generateCode (LLambda _ _) = ""
-  generateCode (LAssign n t val) = generateCodeT t ++ " " ++ n ++ " = " ++ generateCode val ++ ";\n"
+  generateCode (LAssign n t val) = generateCodeT t ++ " " ++ n ++ " = " ++ generateCode val ++ " \n"
   generateCode (LReAssign n val) = n ++ " = " ++ generateCode val
-  generateCode (LReturn s) = generateCode s
+  generateCode (LReturn s) = "return " ++ generateCode s ++ ";\n"
   generateCode (LLitI i) = show i
   generateCode (LLitF f) = show f
   generateCode (LLitS s) = s
@@ -74,4 +74,4 @@ module CodeGen where
   generateCode (LLitB False) = "0"
   generateCode (LLitL ls) = (show (getLType (head ls))) ++ " *"
   generateCode (LDataStructL n d) = "struct " ++ n
-  generateCode _ = undefined
+  generateCode _ = ""

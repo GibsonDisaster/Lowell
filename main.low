@@ -36,8 +36,8 @@ Prog {
       return 1;
     }
 
-    let p: Int := x - 1;
-    let y: Int := fact (p, p);
+    let p: Int := Person ["Henning", 20];
+    let y: Int := fact (p);
     let z: Int := x * y;
     return z;
   }

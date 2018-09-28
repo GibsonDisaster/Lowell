@@ -23,6 +23,8 @@ module Types where
                | LDatas [LStruct] -- All data of a file [LDataParent]
                | LDataParent String [LStruct] -- Person [LData]
                | LData (String, [LType]) -- Data-type pairs of kinds with data associated with it ( ie: LData Person [(Child, []), (Adult, [])] )
+               | LDataDec String [LStruct] -- When a user creates an instance of a DataStruct.
+               | LDataAccess String Int -- When a user accesses a field from the datastruct using the index number
                | LComment String -- comment
                | LBlock [LStruct] -- Each line of the program
                | LFuncFull LStruct LStruct -- Func-Def Func-Body
